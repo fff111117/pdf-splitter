@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>مُقسِّم الملفات</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --ink:#0F1117;
+  --ink2:#3D4152;
+  --ink3:#6B7080;
+  --edge:#E4E6EE;
+  --bg:#F5F6FA;
+  --surface:#FFFFFF;
+  --accent:#3B5BDB;
+  --accent-dim:#EEF1FF;
+  --accent-dark:#2F4AC9;
+  --green:#087F5B;
+  --green-dim:#EBFBEE;
+  --amber:#E67700;
+  --amber-dim:#FFF3BF;
+  --red:#C92A2A;
+  --red-dim:#FFF5F5;
+  --r:14px;
+  --r-sm:10px;
+  --sh:0 2px 12px rgba(0,0,0,.07);
+  --sh-lg:0 8px 32px rgba(0,0,0,.12);
+}
+
+body{
+  font-family:'IBM Plex Sans Arabic',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100dvh;
+  font-size:15px;
+  line-height:1.5;
+}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100dvh;flex-direction:column}
+.screen.active{display:flex}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--edge);
+  padding:14px 20px;
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:50;
+}
+.topbar-logo{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--accent);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:18px;flex-shrink:0;
+}
+.topbar h1{font-size:17px;font-weight:700;color:var(--ink);flex:1}
+.topbar-sub{font-size:12px;color:var(--ink3);font-weight:400}
+.back-btn{
+  width:36px;height:36px;border-radius:10px;border:1.5px solid var(--edge);
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--ink2);transition:.15s;
+}
+.back-btn:active{background:var(--bg)}
+
+/* ── SCROLLABLE BODY ── */
+.scroll-body{flex:1;overflow-y:auto;padding:20px}
+.inner{max-width:560px;margin:0 auto}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--edge);padding:18px;margin-bottom:14px;box-shadow:var(--sh)}
+
+/* ── BUTTONS ── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:14px 20px;border-radius:var(--r-sm);border:none;
+  font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+  transition:.15s;letter-spacing:.01em;
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-primary:disabled{background:#B0B9E8;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--accent-dim);color:var(--accent);border:1.5px solid #C5CFFF}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1.5px solid #FFD8D8}
+.btn-sm{padding:9px 16px;font-size:13px;width:auto;border-radius:8px}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn-ghost{flex:.42}
+.btn-row .btn-primary{flex:1}
+
+/* ── INPUTS ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.field input,.field select{
+  width:100%;padding:12px 14px;border:1.5px solid var(--edge);border-radius:var(--r-sm);
+  font-family:inherit;font-size:15px;color:var(--ink);background:var(--surface);
+  direction:rtl;transition:.15s;
+}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.12)}
+.field input[type=number]{appearance:none;-moz-appearance:textfield}
+
+/* ── UPLOAD ZONE ── */
+.dropzone{
+  border:2px dashed var(--edge);border-radius:var(--r);padding:32px 20px;text-align:center;
+  cursor:pointer;transition:.2s;background:var(--bg);
+}
+.dropzone:hover,.dropzone.hover{border-color:var(--accent);background:var(--accent-dim)}
+.dropzone.ok{border-color:var(--green);background:var(--green-dim);border-style:solid}
+.dropzone.err{border-color:var(--red);background:var(--red-dim);border-style:solid}
+.dz-icon{font-size:42px;margin-bottom:10px;display:block}
+.dz-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.dz-sub{font-size:13px;color:var(--ink3)}
+
+/* ── STEPS INDICATOR ── */
+.steps{display:flex;align-items:center;padding:0 4px;margin-bottom:22px}
+.step-item{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.step-item:not(:last-child)::after{
+  content:'';position:absolute;top:14px;left:-50%;width:100%;height:2px;
+  background:var(--edge);z-index:0;
+}
+.step-item.done:not(:last-child)::after{background:var(--accent)}
+.step-dot{
+  width:28px;height:28px;border-radius:50%;border:2px solid var(--edge);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--ink3);z-index:1;transition:.25s;
+}
+.step-item.active .step-dot{border-color:var(--accent);background:var(--accent);color:#fff}
+.step-item.done .step-dot{border-color:var(--accent);background:var(--accent);color:#fff}
+.step-label{font-size:11px;color:var(--ink3);margin-top:5px;font-weight:500}
+.step-item.active .step-label,.step-item.done .step-label{color:var(--accent);font-weight:600}
+
+/* ── MODE SWITCH ── */
+.mode-switch{display:flex;background:var(--bg);border:1px solid var(--edge);border-radius:var(--r-sm);padding:4px;gap:4px;margin-bottom:16px}
+.mode-opt{flex:1;padding:10px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--ink3);transition:.2s}
+.mode-opt.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ── SECTION CARD ── */
+.sec-card{
+  background:var(--bg);border:1.5px solid var(--edge);border-radius:var(--r-sm);
+  padding:14px;margin-bottom:10px;
+}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-label{font-size:14px;font-weight:700;color:var(--accent)}
+.page-row{display:flex;gap:10px;align-items:flex-end}
+.page-row .field{flex:1;margin:0}
+.page-sep{padding-bottom:12px;color:var(--ink3);font-size:20px;font-weight:300}
+
+/* ── BADGE ── */
+.badge{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.02em;
+}
+.badge-accent{background:var(--accent-dim);color:var(--accent)}
+.badge-green{background:var(--green-dim);color:var(--green)}
+.badge-amber{background:var(--amber-dim);color:var(--amber)}
+
+/* ── ALERT ── */
+.alert{padding:12px 14px;border-radius:var(--r-sm);font-size:13px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-info{background:var(--accent-dim);color:#1E3A8A;border:1px solid #C5CFFF}
+.alert-success{background:var(--green-dim);color:var(--green);border:1px solid #A9E6C5}
+.alert-warn{background:var(--amber-dim);color:var(--amber);border:1px solid #FFE066}
+.alert-error{background:var(--red-dim);color:var(--red);border:1px solid #FFB3B3}
+
+/* ── PROJECT CARD (home) ── */
+.proj-card{
+  background:var(--surface);border-radius:var(--r);border:1.5px solid var(--edge);
+  padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;
+  cursor:pointer;transition:.2s;box-shadow:var(--sh);
+}
+.proj-card:hover,.proj-card:active{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--sh-lg)}
+.proj-icon{
+  width:46px;height:46px;border-radius:12px;background:var(--accent-dim);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+}
+.proj-info{flex:1;min-width:0}
+.proj-name{font-weight:700;font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-meta{font-size:12px;color:var(--ink3);margin-top:3px}
+.proj-arrow{color:var(--ink3);font-size:18px}
+
+/* ── EXPORT ROW ── */
+.exp-row{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--bg);border-radius:var(--r-sm);border:1px solid var(--edge);margin-bottom:8px;
+}
+.exp-icon{font-size:22px;flex-shrink:0}
+.exp-info{flex:1;min-width:0}
+.exp-name{font-size:14px;font-weight:600;color:var(--ink)}
+.exp-pages{font-size:12px;color:var(--ink3);margin-top:2px}
+
+/* ── PROGRESS ── */
+.prog-wrap{margin-top:8px}
+.prog-bar{height:8px;background:var(--edge);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s;width:0%}
+.prog-label{font-size:12px;color:var(--ink3);margin-top:6px;text-align:center}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:60px 24px}
+.empty-icon{font-size:64px;margin-bottom:16px;display:block}
+.empty-title{font-size:19px;font-weight:700;margin-bottom:8px;color:var(--ink)}
+.empty-sub{font-size:14px;color:var(--ink3);margin-bottom:28px}
+
+/* ── FAB ── */
+.fab{
+  position:fixed;bottom:28px;left:24px;
+  width:56px;height:56px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;
+  font-size:28px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(59,91,219,.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;transition:.2s;
+}
+.fab:active{transform:scale(.92)}
+
+/* ── INFO STRIP ── */
+.info-strip{
+  background:var(--accent);color:#fff;
+  padding:10px 14px;border-radius:var(--r-sm);font-size:13px;font-weight:600;
+  margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+
+/* ── WORD NOTICE ── */
+.word-notice{
+  background:#FFF0F6;border:1px solid #FFACD9;border-radius:var(--r-sm);
+  padding:12px 14px;font-size:13px;color:#A61E4D;margin-bottom:14px;
+}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--edge);margin:16px 0}
+
+/* ── AUTO PREVIEW ── */
+.auto-prev-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 12px;background:var(--bg);border-radius:8px;
+  border:1px solid var(--edge);margin-bottom:6px;font-size:13px;
+}
+.auto-prev-name{font-weight:600;color:var(--ink)}
+.auto-prev-range{color:var(--ink3)}
+
+/* ── SECTION NAME INPUT ── */
+.sec-name-input{
+  width:100%;padding:9px 12px;border:1.5px solid var(--edge);border-radius:8px;
+  font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface);
+  direction:rtl;margin-bottom:10px;transition:.15s;
+}
+.sec-name-input:focus{outline:none;border-color:var(--accent)}
+
+/* ── FOOTER SPACER ── */
+.spacer{height:20px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ HOME ═══════════════════════════════════ -->
+<div id="s-home" class="screen active">
+  <div class="topbar">
+    <div class="topbar-logo">✂</div>
+    <div>
+      <h1>مُقسِّم الملفات</h1>
+      <div class="topbar-sub">قسّم أي PDF إلى أجزاء منفصلة</div>
+    </div>
+  </div>
+  <div class="scroll-body">
+    <div class="inner">
+      <div id="home-list"></div>
+      <div id="home-empty" class="empty" style="display:none">
+        <span class="empty-icon">📂</span>
+        <div class="empty-title">لا توجد مشاريع بعد</div>
+        <div class="empty-sub">أنشئ مشروعك الأول لتبدأ تقسيم ملفاتك</div>
+        <button class="btn btn-primary" style="max-width:200px;margin:0 auto" onclick="goCreate()">
+          <span>＋</span> مشروع جديد
+        </button>
+      </div>
+    </div>
+  </div>
+  <button class="fab" onclick="goCreate()" title="مشروع جديد">＋</button>
+</div>
+
+<!-- ═══════════════════════════════════ CREATE ════════════════════════════════ -->
+<div id="s-create" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goHome()">→</button>
+    <h1>مشروع جديد</h1>
+  </div>
+  <div class="scroll-body">
+    <div class="inner">
+
+      <!-- Step indicator -->
+      <div class="steps" id="step-ind">
+        <div class="step-item active" id="si1">
+          <div class="step-dot">1</div>
+          <div class="step-label">الملف</div>
+        </div>
+        <div class="step-item" id="si2">
+          <div class="step-dot">2</div>
+          <div class="step-label">الأقسام</div>
+        </div>
+        <div class="step-item" id="si3">
+          <div class="step-dot">3</div>
+          <div class="step-label">التصدير</div>
+        </div>
+      </div>
+
+      <!-- ─── STEP 1: Upload ─── -->
+      <div id="cstep1">
+        <div class="card">
+          <div class="field">
+            <label>اسم المشروع</label>
+            <input type="text" id="proj-name" placeholder="مثال: كتاب الفقه — الجزء الأول">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>ملف PDF</label>
+            <div class="dropzone" id="dz" onclick="document.getElementById('fi').click()">
+              <span class="dz-icon">📤</span>
+              <div class="dz-title">اضغط لاختيار ملف PDF</div>
+              <div class="dz-sub">سيتم تقسيمه إلى أقسام منفصلة</div>
+            </div>
+            <input type="file" id="fi" accept=".pdf" style="display:none" onchange="onFileChange(this)">
+          </div>
+        </div>
+        <div class="word-notice">
+          📝 <strong>ملفات Word:</strong> حوّلها إلى PDF أولاً عبر ilovepdf.com ثم ارفعها هنا
+        </div>
+        <div id="file-msg"></div>
+        <button class="btn btn-primary" id="btn-step1" onclick="toStep2()" disabled>
+          التالي: تحديد الأقسام ←
+        </button>
+      </div>
+
+      <!-- ─── STEP 2: Sections ─── -->
+      <div id="cstep2" style="display:none">
+        <div class="info-strip" id="pages-strip">📄 إجمالي الصفحات: — صفحة</div>
+
+        <div class="card">
+          <div class="mode-switch">
+            <button class="mode-opt active" id="mo-auto" onclick="setMode('auto')">🔢 تقسيم متساوٍ</button>
+            <button class="mode-opt" id="mo-man" onclick="setMode('man')">✏️ تحديد يدوي</button>
+          </div>
+
+          <!-- AUTO -->
+          <div id="m-auto">
+            <div class="field">
+              <label>عدد الأقسام</label>
+              <input type="number" id="cnt-auto" min="2" max="100" value="3" oninput="buildAuto()">
+            </div>
+            <div id="auto-prev"></div>
+          </div>
+
+          <!-- MANUAL -->
+          <div id="m-man" style="display:none">
+            <div class="field">
+              <label>عدد الأقسام</label>
+              <input type="number" id="cnt-man" min="2" max="100" value="3" oninput="buildManual()">
+            </div>
+            <div id="man-list"></div>
+          </div>
+        </div>
+
+        <div id="sec-err" style="display:none"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="toStep1()">→ رجوع</button>
+          <button class="btn btn-primary" onclick="toStep3()">معاينة وتصدير ←</button>
+        </div>
+      </div>
+
+      <!-- ─── STEP 3: Export ─── -->
+      <div id="cstep3" style="display:none">
+
+        <div class="card">
+          <div style="font-weight:700;font-size:16px;margin-bottom:14px">📋 الأقسام المحددة</div>
+          <div id="exp-list"></div>
+        </div>
+
+        <div class="alert alert-info">
+          <span class="alert-icon">💡</span>
+          <span>سيتم تحميل كل قسم كملف PDF منفصل على هاتفك مباشرةً</span>
+        </div>
+
+        <div class="card" id="prog-card" style="display:none">
+          <div style="font-size:14px;font-weight:600;margin-bottom:10px" id="prog-title">جاري التصدير…</div>
+          <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+          <div class="prog-label" id="prog-lbl"></div>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:12px">
+          <button class="btn btn-ghost" onclick="toStep2()">→ رجوع</button>
+          <button class="btn btn-success" id="btn-exp" onclick="exportAll()">⬇️ تصدير الكل</button>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveAndHome()">💾 حفظ المشروع والعودة</button>
+        <div class="spacer"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PROJECT ═══════════════════════════════ -->
+<div id="s-proj" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goHome()">→</button>
+    <div>
+      <h1 id="pdet-title">المشروع</h1>
+      <div class="topbar-sub" id="pdet-sub"></div>
+    </div>
+  </div>
+  <div class="scroll-body">
+    <div class="inner">
+
+      <div class="alert alert-warn">
+        <span class="alert-icon">⚠️</span>
+        <span>لحماية خصوصيتك، الملفات غير محفوظة. أعد رفع الملف لتصديره مجدداً.</span>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700;font-size:15px;margin-bottom:12px">أقسام المشروع</div>
+        <div id="pdet-secs"></div>
+      </div>
+
+      <!-- Re-upload -->
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--ink2)">🔄 رفع الملف للتصدير</div>
+        <div class="dropzone" id="re-dz" onclick="document.getElementById('re-fi').click()">
+          <span class="dz-icon">📤</span>
+          <div class="dz-title">اضغط لرفع الملف مجدداً</div>
+          <div class="dz-sub">نفس ملف PDF الأصلي</div>
+        </div>
+        <input type="file" id="re-fi" accept=".pdf" style="display:none" onchange="onReupload(this)">
+      </div>
+
+      <div id="re-msg"></div>
+
+      <div id="pdet-exp-btn" style="display:none">
+        <button class="btn btn-success" onclick="exportProject()">⬇️ تصدير جميع الأقسام</button>
+        <div style="height:10px"></div>
+      </div>
+
+      <div class="card" id="re-prog-card" style="display:none">
+        <div class="prog-bar"><div class="prog-fill" id="re-prog-fill"></div></div>
+        <div class="prog-label" id="re-prog-lbl"></div>
+      </div>
+
+      <div class="divider"></div>
+      <button class="btn btn-danger btn-sm" onclick="delProject()">🗑️ حذف المشروع</button>
+      <div class="spacer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ STATE ═══
+let projects=[];
+let curProj=null;
+let curBytes=null;
+let curPages=0;
+let curSecs=[];
+let mode='auto';
+let reBytes=null;
+
+// ═══ STORAGE ═══
+async function load(){
+  try{
+    const r=await window.storage.get('filsplitter-v1');
+    if(r) projects=JSON.parse(r.value);
+  }catch(e){projects=[]}
+  renderHome();
+}
+async function save(){
+  try{await window.storage.set('filsplitter-v1',JSON.stringify(projects))}catch(e){}
+}
+
+// ═══ ROUTING ═══
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goHome(){
+  curBytes=null;curPages=0;curSecs=[];curProj=null;reBytes=null;
+  renderHome();show('s-home');
+}
+
+function goCreate(){
+  resetCreate();show('s-create');
+}
+
+// ═══ HOME ═══
+function renderHome(){
+  const list=document.getElementById('home-list');
+  const empty=document.getElementById('home-empty');
+  if(!projects.length){list.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  list.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">
+      ${projects.length} ${projects.length===1?'مشروع':'مشاريع'}
+    </div>
+    ${projects.map(p=>`
+      <div class="proj-card" onclick="openProj('${p.id}')">
+        <div class="proj-icon">📂</div>
+        <div class="proj-info">
+          <div class="proj-name">${esc(p.name)}</div>
+          <div class="proj-meta">${p.secs.length} أقسام · ${p.totalPages} صفحة · ${p.date}</div>
+        </div>
+        <div class="proj-arrow">←</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ═══ CREATE FLOW ═══
+function resetCreate(){
+  document.getElementById('proj-name').value='';
+  document.getElementById('fi').value='';
+  setDZ('dz','idle');
+  setMsg('file-msg','');
+  document.getElementById('btn-step1').disabled=true;
+  curBytes=null;curPages=0;curSecs=[];
+  setSI(1);showCStep(1);
+  setMode('auto');
+  document.getElementById('cnt-auto').value=3;
+  document.getElementById('cnt-man').value=3;
+  document.getElementById('auto-prev').innerHTML='';
+  document.getElementById('man-list').innerHTML='';
+}
+
+function showCStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('cstep'+i).style.display=n===i?'block':'none';
+  });
+}
+
+function setSI(active){
+  for(let i=1;i<=3;i++){
+    const el=document.getElementById('si'+i);
+    const dot=el.querySelector('.step-dot');
+    el.className='step-item'+(i===active?' active':i<active?' done':'');
+    dot.textContent=i<active?'✓':i;
+  }
+}
+
+// File pick
+async function onFileChange(inp){
+  const f=inp.files[0];
+  if(!f)return;
+  if(!f.name.toLowerCase().endsWith('.pdf')){
+    setMsg('file-msg','<div class="alert alert-error"><span class="alert-icon">❌</span><span>يرجى اختيار ملف PDF فقط</span></div>');
+    return;
+  }
+  setDZ('dz','loading');
+  setMsg('file-msg','');
+  try{
+    const ab=await f.arrayBuffer();
+    curBytes=new Uint8Array(ab);
+    const doc=await PDFLib.PDFDocument.load(curBytes);
+    curPages=doc.getPageCount();
+    setDZ('dz','ok',f.name,fmtSize(f.size));
+    setMsg('file-msg',`<div class="alert alert-success"><span class="alert-icon">✅</span><span>تم قراءة الملف — إجمالي الصفحات: <strong>${curPages} صفحة</strong></span></div>`);
+    document.getElementById('btn-step1').disabled=false;
+  }catch(e){
+    setDZ('dz','err');
+    setMsg('file-msg','<div class="alert alert-error"><span class="alert-icon">❌</span><span>تعذّر قراءة الملف. تأكد أنه PDF سليم غير محمي بكلمة مرور.</span></div>');
+  }
+}
+
+function setDZ(id,state,name,size){
+  const el=document.getElementById(id);
+  el.className='dropzone';
+  if(state==='idle'){
+    el.innerHTML=`<span class="dz-icon">📤</span><div class="dz-title">اضغط لاختيار ملف PDF</div><div class="dz-sub">سيتم تقسيمه إلى أقسام منفصلة</div>`;
+  }else if(state==='loading'){
+    el.innerHTML=`<span class="dz-icon">⏳</span><div class="dz-title">جاري قراءة الملف…</div><div class="dz-sub">لحظة واحدة</div>`;
+  }else if(state==='ok'){
+    el.classList.add('ok');
+    el.innerHTML=`<span class="dz-icon">✅</span><div class="dz-title">${esc(name)}</div><div class="dz-sub">${size}</div>`;
+  }else if(state==='err'){
+    el.classList.add('err');
+    el.innerHTML=`<span class="dz-icon">❌</span><div class="dz-title">خطأ في قراءة الملف</div><div class="dz-sub">جرّب ملفاً آخر</div>`;
+  }
+}
+
+function setMsg(id,html){document.getElementById(id).innerHTML=html}
+
+function toStep1(){showCStep(1);setSI(1)}
+
+function toStep2(){
+  const name=document.getElementById('proj-name').value.trim();
+  if(!name){alert('أدخل اسم المشروع أولاً');document.getElementById('proj-name').focus();return}
+  if(!curBytes){alert('ارفع ملف PDF أولاً');return}
+  document.getElementById('pages-strip').textContent=`📄 إجمالي صفحات الملف: ${curPages} صفحة`;
+  setSI(2);showCStep(2);buildAuto();
+}
+
+// ─── MODE ───
+function setMode(m){
+  mode=m;
+  document.getElementById('mo-auto').className='mode-opt'+(m==='auto'?' active':'');
+  document.getElementById('mo-man').className='mode-opt'+(m==='man'?' active':'');
+  document.getElementById('m-auto').style.display=m==='auto'?'block':'none';
+  document.getElementById('m-man').style.display=m==='man'?'block':'none';
+  if(m==='man')buildManual();else buildAuto();
+}
+
+// ─── AUTO ───
+function buildAuto(){
+  const cnt=parseInt(document.getElementById('cnt-auto').value)||3;
+  const prev=document.getElementById('auto-prev');
+  if(cnt<2||cnt>curPages){
+    prev.innerHTML=`<div class="alert alert-warn"><span class="alert-icon">⚠️</span><span>عدد الأقسام يجب بين 2 و ${curPages}</span></div>`;
+    curSecs=[];return;
+  }
+  const base=Math.floor(curPages/cnt);
+  const rem=curPages%cnt;
+  curSecs=[];let start=1;
+  for(let i=0;i<cnt;i++){
+    const extra=i<rem?1:0;
+    const end=Math.min(start+base+extra-1,curPages);
+    curSecs.push({name:`القسم ${toAr(i+1)}`,startPage:start,endPage:end});
+    start=end+1;
+  }
+  prev.innerHTML=`
+    <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:8px">معاينة التقسيم</div>
+    ${curSecs.map((s,i)=>`
+      <div class="auto-prev-item">
+        <span class="auto-prev-name">📄 ${esc(s.name)}</span>
+        <span class="auto-prev-range">ص${s.startPage}–ص${s.endPage} <span class="badge badge-accent">${s.endPage-s.startPage+1} ص</span></span>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ─── MANUAL ───
+function buildManual(){
+  const cnt=parseInt(document.getElementById('cnt-man').value)||3;
+  const el=document.getElementById('man-list');
+  el.innerHTML='';
+  // preserve old values
+  const old=curSecs.slice();
+  curSecs=[];
+  for(let i=0;i<cnt;i++){
+    const div=document.createElement('div');
+    div.className='sec-card';
+    div.innerHTML=`
+      <div class="sec-head">
+        <span class="sec-label">📄 القسم ${toAr(i+1)}</span>
+        <span class="badge badge-accent">من 1 إلى ${curPages}</span>
+      </div>
+      <input class="sec-name-input" id="sn${i}" type="text" placeholder="اسم القسم (اختياري)" value="${esc(old[i]?.name||`القسم ${toAr(i+1)}`)}">
+      <div class="page-row">
+        <div class="field">
+          <label>من صفحة</label>
+          <input type="number" id="ss${i}" min="1" max="${curPages}" value="${old[i]?.startPage||''}" placeholder="1">
+        </div>
+        <div class="page-sep">–</div>
+        <div class="field">
+          <label>إلى صفحة</label>
+          <input type="number" id="se${i}" min="1" max="${curPages}" value="${old[i]?.endPage||''}" placeholder="${curPages}">
+        </div>
+      </div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+function collectManual(){
+  const cnt=parseInt(document.getElementById('cnt-man').value)||3;
+  const secs=[];
+  for(let i=0;i<cnt;i++){
+    const name=document.getElementById(`sn${i}`)?.value.trim()||`القسم ${toAr(i+1)}`;
+    const s=parseInt(document.getElementById(`ss${i}`)?.value);
+    const e=parseInt(document.getElementById(`se${i}`)?.value);
+    if(!s||!e||s<1||e>curPages||s>e)return null;
+    secs.push({name,startPage:s,endPage:e});
+  }
+  return secs;
+}
+
+function toStep3(){
+  if(mode==='auto'){
+    buildAuto();
+    if(!curSecs.length){
+      showErr('تحقق من عدد الأقسام');return;
+    }
+  }else{
+    const secs=collectManual();
+    if(!secs){
+      showErr('تحقق من نطاقات الصفحات — كل قسم يجب أن يحتوي على بداية ونهاية صحيحتين');return;
+    }
+    curSecs=secs;
+  }
+  hideErr();
+  // build export list
+  document.getElementById('exp-list').innerHTML=curSecs.map((s,i)=>`
+    <div class="exp-row">
+      <span class="exp-icon">📄</span>
+      <div class="exp-info">
+        <div class="exp-name">${esc(s.name)}</div>
+        <div class="exp-pages">الصفحات: ${s.startPage} – ${s.endPage} · <span class="badge badge-accent">${s.endPage-s.startPage+1} صفحة</span></div>
+      </div>
+    </div>
+  `).join('');
+  // reset progress
+  document.getElementById('prog-card').style.display='none';
+  document.getElementById('prog-fill').style.width='0%';
+  document.getElementById('prog-lbl').textContent='';
+  document.getElementById('btn-exp').disabled=false;
+  document.getElementById('btn-exp').innerHTML='⬇️ تصدير الكل';
+  setSI(3);showCStep(3);
+}
+
+function showErr(msg){
+  const el=document.getElementById('sec-err');
+  el.style.display='block';
+  el.innerHTML=`<div class="alert alert-error"><span class="alert-icon">⚠️</span><span>${msg}</span></div>`;
+}
+function hideErr(){document.getElementById('sec-err').style.display='none'}
+
+// ─── EXPORT ───
+async function exportAll(){
+  if(!curBytes||!curSecs.length)return;
+  const btn=document.getElementById('btn-exp');
+  btn.disabled=true;btn.innerHTML='⏳ جاري التصدير…';
+  document.getElementById('prog-card').style.display='block';
+  const pf=document.getElementById('prog-fill');
+  const pl=document.getElementById('prog-lbl');
+  const projName=document.getElementById('proj-name').value.trim()||'مشروع';
+  try{
+    for(let i=0;i<curSecs.length;i++){
+      const pct=Math.round(i/curSecs.length*100);
+      pf.style.width=pct+'%';
+      pl.textContent=`${pct}% · ${curSecs[i].name}`;
+      await sleep(30);
+      await splitAndDownload(curBytes,curSecs[i],`${projName} - ${curSecs[i].name}.pdf`);
+      await sleep(350);
+    }
+    pf.style.width='100%';
+    pl.textContent='✅ اكتمل التصدير';
+    btn.innerHTML='✅ تم التصدير';
+  }catch(e){
+    btn.disabled=false;btn.innerHTML='⬇️ تصدير الكل';
+    alert('خطأ أثناء التصدير: '+e.message);
+  }
+}
+
+async function splitAndDownload(bytes,sec,fname){
+  const src=await PDFLib.PDFDocument.load(bytes);
+  const out=await PDFLib.PDFDocument.create();
+  const idxs=[];
+  for(let p=sec.startPage-1;p<sec.endPage;p++){
+    if(p<src.getPageCount())idxs.push(p);
+  }
+  const pages=await out.copyPages(src,idxs);
+  pages.forEach(pg=>out.addPage(pg));
+  const outBytes=await out.save();
+  dlBytes(outBytes,fname);
+}
+
+function dlBytes(bytes,name){
+  const blob=new Blob([bytes],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),8000);
+}
+
+async function saveAndHome(){
+  const name=document.getElementById('proj-name').value.trim();
+  if(name&&curSecs.length){
+    const p={
+      id:Date.now()+'',
+      name,totalPages:curPages,
+      secs:curSecs,
+      date:new Date().toLocaleDateString('ar-SA')
+    };
+    projects.unshift(p);
+    await save();
+  }
+  goHome();
+}
+
+// ═══ PROJECT DETAIL ═══
+function openProj(id){
+  curProj=projects.find(p=>p.id===id);
+  if(!curProj)return;
+  document.getElementById('pdet-title').textContent=curProj.name;
+  document.getElementById('pdet-sub').textContent=`${curProj.secs.length} أقسام · ${curProj.totalPages} صفحة`;
+  document.getElementById('pdet-secs').innerHTML=curProj.secs.map((s,i)=>`
+    <div class="exp-row">
+      <span class="exp-icon">📄</span>
+      <div class="exp-info">
+        <div class="exp-name">${esc(s.name)}</div>
+        <div class="exp-pages">الصفحات: ${s.startPage} – ${s.endPage} · <span class="badge badge-accent">${s.endPage-s.startPage+1} صفحة</span></div>
+      </div>
+    </div>
+  `).join('');
+  setDZ('re-dz','idle');
+  setMsg('re-msg','');
+  document.getElementById('pdet-exp-btn').style.display='none';
+  document.getElementById('re-prog-card').style.display='none';
+  reBytes=null;
+  show('s-proj');
+}
+
+async function onReupload(inp){
+  const f=inp.files[0];if(!f)return;
+  setDZ('re-dz','loading');
+  try{
+    const ab=await f.arrayBuffer();
+    reBytes=new Uint8Array(ab);
+    const doc=await PDFLib.PDFDocument.load(reBytes);
+    const pg=doc.getPageCount();
+    setDZ('re-dz','ok',f.name,fmtSize(f.size));
+    if(pg!==curProj.totalPages){
+      setMsg('re-msg',`<div class="alert alert-warn"><span class="alert-icon">⚠️</span><span>الملف يحتوي على ${pg} صفحة والمشروع يتوقع ${curProj.totalPages}. تأكد من اختيار الملف الصحيح.</span></div>`);
+    }else{
+      setMsg('re-msg',`<div class="alert alert-success"><span class="alert-icon">✅</span><span>الملف جاهز للتصدير</span></div>`);
+    }
+    document.getElementById('pdet-exp-btn').style.display='block';
+  }catch(e){
+    setDZ('re-dz','err');
+    setMsg('re-msg','<div class="alert alert-error"><span class="alert-icon">❌</span><span>خطأ في قراءة الملف</span></div>');
+  }
+}
+
+async function exportProject(){
+  if(!reBytes||!curProj)return;
+  const pf=document.getElementById('re-prog-fill');
+  const pl=document.getElementById('re-prog-lbl');
+  document.getElementById('re-prog-card').style.display='block';
+  try{
+    for(let i=0;i<curProj.secs.length;i++){
+      const pct=Math.round(i/curProj.secs.length*100);
+      pf.style.width=pct+'%';pl.textContent=`${pct}% · ${curProj.secs[i].name}`;
+      await sleep(30);
+      await splitAndDownload(reBytes,curProj.secs[i],`${curProj.name} - ${curProj.secs[i].name}.pdf`);
+      await sleep(350);
+    }
+    pf.style.width='100%';pl.textContent='✅ اكتمل التصدير';
+  }catch(e){alert('خطأ: '+e.message)}
+}
+
+async function delProject(){
+  if(!confirm('هل تريد حذف هذا المشروع؟'))return;
+  projects=projects.filter(p=>p.id!==curProj.id);
+  await save();curProj=null;goHome();
+}
+
+// ═══ UTILS ═══
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function toAr(n){return n.toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d])}
+
+// ═══ BOOT ═══
+document.addEventListener('DOMContentLoaded',load);
+</script>
+</body>
+</html>

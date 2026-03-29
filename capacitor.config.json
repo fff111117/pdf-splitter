@@ -1,0 +1,6 @@
+{
+  "appId": "com.mypdf.splitter",
+  "appName": "مقسم الملفات",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
