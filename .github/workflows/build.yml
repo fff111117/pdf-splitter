@@ -4,38 +4,53 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           npm install -g @capacitor/cli
-          npm init -y
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
           npm install @capacitor/core @capacitor/android
 
-      - name: Prepare www
+      - name: Prepare web assets
         run: |
-          mkdir www
+          mkdir -p www
           cp index.html www/index.html
 
-      - name: Add Android
-        run: npx cap add android
+      - name: Add Android platform
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            npx cap sync android
+          fi
 
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Fix Gradle Cache Issues
+        run: |
+          cd android
+          # Clear gradle cache if it exists to avoid corrupt jar issues
+          rm -rf ~/.gradle/caches/jars-9/
+          # Ensure gradlew is executable
+          chmod +x gradlew
 
       - name: Build APK
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace --info
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
