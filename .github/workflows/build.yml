@@ -3,13 +3,15 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         run: |
@@ -39,18 +41,28 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Fix Gradle Cache Issues
+      - name: Fix Gradle Issues
         run: |
           cd android
-          # Clear gradle cache if it exists to avoid corrupt jar issues
+          # Clear gradle cache to avoid corrupt jar issues
           rm -rf ~/.gradle/caches/jars-9/
-          # Ensure gradlew is executable
+          
+          # Fix Duplicate class kotlin.text.jdk8.RegexExtensionsJDK8Kt
+          # This happens because of conflicts between kotlin-stdlib and kotlin-stdlib-jdk8
+          echo "configurations.all {
+              resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                  if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib-jdk')) {
+                      details.useTarget 'org.jetbrains.kotlin:kotlin-stdlib:' + details.requested.version
+                  }
+              }
+          }" >> build.gradle
+
           chmod +x gradlew
 
       - name: Build APK
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace --info
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
